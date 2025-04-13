@@ -1,11 +1,11 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
 import httpx
+import os
 import time
 
 app = FastAPI()
 
-# Define subscription tiers and limits
 PLAN_SETTINGS = {
     "lm_free": {"max_messages": 50, "delay": 2.5},
     "standard": {"max_messages": 500, "delay": 1.0},
@@ -14,7 +14,6 @@ PLAN_SETTINGS = {
     "mu_business": {"max_messages": float('inf'), "delay": 0.0}
 }
 
-# Simulated in-memory user data
 user_usage = {}
 
 class ChatRequest(BaseModel):
@@ -28,27 +27,22 @@ async def ask_carl(data: ChatRequest):
     user_id = data.userId
     message = data.message
 
-    # Initialize user if not in memory
     if user_id not in user_usage:
         user_usage[user_id] = 0
 
-    # Check plan limits
     settings = PLAN_SETTINGS.get(plan, PLAN_SETTINGS["lm_free"])
     if user_usage[user_id] >= settings["max_messages"]:
-        return {"response": "🚫 You've hit your message limit for this plan. Upgrade to keep chatting!"}
+        return {"response": "🚫 You've hit your message limit for this plan."}
 
-    # Delay for lower tiers (simulate slower response)
     time.sleep(settings["delay"])
-
-    # Update usage
     user_usage[user_id] += 1
 
-    # Call real AI (OpenRouter)
+    api_key = os.getenv("OPENROUTER_API_KEY", "")
     async with httpx.AsyncClient() as client:
         response = await client.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers={
-                "Authorization": "Bearer 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",  # Replace with your OpenRouter key
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             },
             json={
@@ -63,6 +57,6 @@ async def ask_carl(data: ChatRequest):
             result = response.json()
             ai_reply = result['choices'][0]['message']['content']
         except:
-            ai_reply = "⚠️ Carl is having trouble thinking right now. Try again later."
+            ai_reply = "⚠️ Carl is having trouble thinking right now."
 
     return {"response": ai_reply}
