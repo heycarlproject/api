@@ -45,7 +45,7 @@ async def ask_carl(data: ChatRequest):
         time.sleep(settings["delay"])
         user_usage[user_id] += 1
 
-        api_key = os.getenv("OPENROUTER_API_KEY", "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")
+        api_key = os.getenv("OPENROUTER_API_KEY", "")
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 "https://openrouter.ai/api/v1/chat/completions",
